@@ -135,4 +135,44 @@ public class SalesAppTest {
 		verify(report, times(0)).toXml();
 		verify(ecmService, times(0)).uploadDocument("XML String");
 	}
+
+	@Test
+	public void testGenerateReport_given_isNatTrade_true() {
+
+		String salesId = "Eddy";
+		List<String> headers = Arrays.asList("Sales ID", "Sales Name", "Activity", "Time");
+		List<SalesReportData> reportDataList = new ArrayList<>();
+		SalesReportData salesReportData = new SalesReportData();
+		reportDataList.add(salesReportData);
+
+		Sales sales = spy(new Sales());
+		sales.setSupervisor(false);
+
+		SalesDao salesDao = mock(SalesDao.class);
+		given(salesDao.getSalesBySalesId(salesId)).willReturn(sales);
+
+		SalesReportDao salesReportDao = mock(SalesReportDao.class);
+		given(salesReportDao.getReportData(sales)).willReturn(reportDataList);
+
+		SalesActivityReport report = mock(SalesActivityReport.class);
+		given(report.toXml()).willReturn("XML String");
+
+		EcmService ecmService = spy(new EcmService());
+
+		SalesApp salesApp = spy(new SalesApp());
+		doReturn(salesReportDao).when(salesApp).getSalesReportDao();
+		doReturn(report).when(salesApp).generateReport(headers, reportDataList);
+		doReturn(false).when(salesApp).isNotEffective(sales);
+		doReturn(salesDao).when(salesApp).getSalesDao();
+		doReturn(ecmService).when(salesApp).getEcmService();
+
+		salesApp.generateSalesActivityReport("Eddy", 10, true, false);
+
+		verify(salesDao, times(1)).getSalesBySalesId(salesId);
+		verify(salesApp, times(1)).isNotEffective(sales);
+		verify(salesReportDao, times(1)).getReportData(sales);
+		verify(salesApp, times(1)).generateReport(headers, reportDataList);
+		verify(report, times(1)).toXml();
+		verify(ecmService, times(1)).uploadDocument("XML String");
+	}
 }
