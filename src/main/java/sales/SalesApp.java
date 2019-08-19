@@ -14,58 +14,33 @@ public class SalesApp {
     EcmService ecmService = new EcmService();
 
 	public void generateSalesActivityReport(String salesId, int maxRow, boolean isNatTrade, boolean isSupervisor) {
-
-		List<String> headers = null;
 		
 		if (salesId == null) { return; }
 		
-		Sales sales = salesDao.getSalesBySalesId(salesId);
+		Sales sales = getSalesDao().getSalesBySalesId(salesId);
 
-        if (this.isEffective(sales)){ return; }
+        if (this.isNotEffective(sales)){ return; }
 		
-		List<SalesReportData> reportDataList = salesReportDao.getReportData(sales);
+		List<SalesReportData> reportDataList = getSalesReportDao().getReportData(sales);
 
-        List<SalesReportData> filteredReportDataList = generateFilteredReportDataList(isSupervisor, reportDataList);
+        List<String> headers = generateHeaders(isNatTrade);
 
-        filteredReportDataList = generateTemplateList(maxRow, reportDataList);
-		
-		if (isNatTrade) {
-			headers = Arrays.asList("Sales ID", "Sales Name", "Activity", "Time");
-		} else {
-			headers = Arrays.asList("Sales ID", "Sales Name", "Activity", "Local Time");
-		}
-		
-		SalesActivityReport report = this.generateReport(headers, reportDataList);
+        SalesActivityReport report = this.generateReport(headers, reportDataList);
 
-		ecmService.uploadDocument(report.toXml());
-		
+		getEcmService().uploadDocument(report.toXml());
 	}
 
-    protected List<SalesReportData> generateTemplateList(int maxRow, List<SalesReportData> reportDataList) {
-        List<SalesReportData> tempList = new ArrayList<SalesReportData>();
-        for (int i=0; i < reportDataList.size() || i < maxRow; i++) {
-            tempList.add(reportDataList.get(i));
+    private List<String> generateHeaders(boolean isNatTrade) {
+        List<String> headers;
+        if (isNatTrade) {
+            headers = Arrays.asList("Sales ID", "Sales Name", "Activity", "Time");
+        } else {
+            headers = Arrays.asList("Sales ID", "Sales Name", "Activity", "Local Time");
         }
-        return tempList;
+        return headers;
     }
 
-    protected List<SalesReportData> generateFilteredReportDataList(boolean isSupervisor, List<SalesReportData> reportDataList) {
-        List<SalesReportData> filteredReportDataList = new ArrayList<SalesReportData>();;
-        for (SalesReportData data : reportDataList) {
-            if ("SalesActivity".equalsIgnoreCase(data.getType())) {
-                if (data.isConfidential()) {
-                    if (isSupervisor) {
-                        filteredReportDataList.add(data);
-                    }
-                }else {
-                    filteredReportDataList.add(data);
-                }
-            }
-        }
-        return filteredReportDataList;
-    }
-
-    protected boolean isEffective(Sales sales) {
+    protected boolean isNotEffective(Sales sales) {
         Date today = new Date();
         return today.after(sales.getEffectiveTo()) || today.before(sales.getEffectiveFrom());
     }
@@ -75,4 +50,15 @@ public class SalesApp {
 		return null;
 	}
 
+    public SalesDao getSalesDao() {
+        return salesDao;
+    }
+
+    public SalesReportDao getSalesReportDao() {
+        return salesReportDao;
+    }
+
+    public EcmService getEcmService() {
+        return ecmService;
+    }
 }
